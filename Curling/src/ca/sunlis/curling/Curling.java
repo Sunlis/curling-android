@@ -38,6 +38,7 @@ public class Curling implements ApplicationListener {
 	//Box2D
 	static World world;
 	Box2DDebugRenderer debugRenderer;
+	StoneContact stoneContact;
 	Body hitBody;
 	static float TOUCH_OFFSET = 26f;
 	static final float BOX_STEP = 1/60f;
@@ -69,6 +70,8 @@ public class Curling implements ApplicationListener {
 		
 		world = new World(new Vector2(0,0), true);
 		debugRenderer = new Box2DDebugRenderer();
+		stoneContact = new StoneContact();
+		world.setContactListener(stoneContact);
 		
 		shapeRenderer = new ShapeRenderer();
 		
