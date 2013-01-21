@@ -11,23 +11,23 @@ public class StoneContact implements ContactListener {
 
 	@Override
 	public void beginContact(Contact contact) {
-		Body movingBody,stillBody;
 		if (contact.getFixtureA().getBody().getLinearVelocity().len2() == 0) {
-			movingBody = contact.getFixtureB().getBody();
-			stillBody = contact.getFixtureA().getBody();
+			slowDown(contact.getFixtureB().getBody());
 		} else if (contact.getFixtureB().getBody().getLinearVelocity().len2() == 0) {
-			movingBody = contact.getFixtureA().getBody();
-			stillBody = contact.getFixtureB().getBody();
+			slowDown(contact.getFixtureA().getBody());
 		} else {
-			return;
+			slowDown(contact.getFixtureB().getBody());
+			slowDown(contact.getFixtureA().getBody());
 		}
-		if (stillBody.getType() != BodyType.DynamicBody) {
-			return;
-		}
-		double angle = Math.atan2(movingBody.getLinearVelocity().y, movingBody.getLinearVelocity().x);
+	}
+
+	private void slowDown(Body body) {
+		if (body.getType() != BodyType.DynamicBody) return;
+		
+		double angle = Math.atan2(body.getLinearVelocity().y, body.getLinearVelocity().x);
 		// TODO: Fine-tune this hacky, ball-park static friction
-		float v = 10f;
-		movingBody.setLinearVelocity(movingBody.getLinearVelocity().sub(v*(float)Math.cos(angle),v*(float)Math.sin(angle)));
+		float v = 12f;
+		body.setLinearVelocity(body.getLinearVelocity().sub(v*(float)Math.cos(angle),v*(float)Math.sin(angle)));
 	}
 
 	@Override

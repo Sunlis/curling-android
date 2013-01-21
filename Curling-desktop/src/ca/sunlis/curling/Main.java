@@ -8,8 +8,8 @@ public class Main {
 		LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
 		cfg.title = "Curling";
 		cfg.useGL20 = true;
-		cfg.width = 480;
-		cfg.height = 800;
+		cfg.width = 400;
+		cfg.height = 640;
 		
 		new LwjglApplication(new Curling(), cfg);
 	}

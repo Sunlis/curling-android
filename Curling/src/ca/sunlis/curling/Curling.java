@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL10;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -14,6 +15,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
+import com.badlogic.gdx.math.Circle;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.Body;
@@ -44,12 +47,16 @@ public class Curling implements ApplicationListener {
 	static final float BOX_STEP = 1/60f;
     static final int BOX_VELOCITY_ITERATIONS = 6;
     static final int BOX_POSITION_ITERATIONS = 2;
-    static final float BOX_TO_WORLD = 26; //TODO
-    static final float WORLD_TO_BOX = 1/BOX_TO_WORLD; //TODO
+    static float BOX_TO_WORLD = 26; //TODO
+    static float WORLD_TO_BOX = 1/BOX_TO_WORLD; //TODO
+    static float BOX_STONE_RADIUS = 26;
 	
 	// Textures
 	static Texture redRock;
 	static Texture blueRock;
+	static Texture house;
+	static Circle topHouse;
+	static Circle bottomHouse;
 	
 	// Stones
 	static List<Stone> stones;
@@ -61,8 +68,17 @@ public class Curling implements ApplicationListener {
 	
 	@Override
 	public void create() {
-		screenW = Gdx.graphics.getWidth();
-		screenH = Gdx.graphics.getHeight();
+		String imageExtension = (Gdx.graphics.getWidth() < 800) ? "_36" : "_72";
+		screenW = (Gdx.graphics.getWidth() < 800) ? 400 : 800;
+		screenH = screenW * ((float)Gdx.graphics.getHeight()/(float)Gdx.graphics.getWidth());
+		
+		if (Gdx.graphics.getWidth() < 800) {
+			screenW = 400;
+			imageExtension = "_36";
+			Curling.BOX_STONE_RADIUS = 13;
+//			Curling.BOX_TO_WORLD = 1/13;
+//			Curling.WORLD_TO_BOX = 1/Curling.BOX_TO_WORLD;
+		}
 		
 		camera = new OrthographicCamera();
 		camera.setToOrtho(false, screenW, screenH);
@@ -76,14 +92,19 @@ public class Curling implements ApplicationListener {
 		shapeRenderer = new ShapeRenderer();
 		
 		createScreenBox();
-        
-//		createBody(camera.viewportWidth / 2, camera.viewportHeight / 2);
 		
-		redRock = new Texture(Gdx.files.internal("redRock.png"));
-		blueRock = new Texture(Gdx.files.internal("blueRock.png"));
+		
+		redRock = new Texture(Gdx.files.internal("redRock"+imageExtension+".png"));
+		blueRock = new Texture(Gdx.files.internal("blueRock"+imageExtension+".png"));
+		house = new Texture(Gdx.files.internal("house"+imageExtension+".png"));
+		
+		topHouse = new Circle();
+		topHouse.radius = house.getWidth()/2;
+		topHouse.x = screenW/2;
+		topHouse.y = screenH/2;
 		
 		stones = new ArrayList<Stone>();
-		for(int i = 0; i < 16; i++) {
+		for(int i = 0; i < 4; i++) {
 			float x = ((i%4)+1) * (screenW/5);
 			float y = (float) ((Math.floor(i/4)+1) * (screenH/5));
 			stones.add(new Stone(x, y, i%2 == 0));
@@ -107,6 +128,25 @@ public class Curling implements ApplicationListener {
 		Gdx.gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
 		camera.update();
 		
+		batch.setProjectionMatrix(camera.combined);
+		batch.begin();
+		
+		batch.draw(house, topHouse.x - topHouse.radius, topHouse.y - topHouse.radius);
+//		sheetRect.x++;
+//		sheetRect.y++;
+		
+		boolean wantRender = false;
+		for (Stone stone : stones) {
+			stone.draw();
+			if (!wantRender && stone.moving) wantRender = true;
+		}		
+		batch.end();
+		
+		shapeRenderer.begin(ShapeType.Rectangle);
+		shapeRenderer.setColor(0, 1, 0, 1);
+		shapeRenderer.rect(0, 0, 100, 100);
+		shapeRenderer.end();
+		
 		if (Gdx.input.isTouched() && hitBody != null) {
 			shapeRenderer.begin(ShapeType.Line);
 			shapeRenderer.setColor(0, 1, 0, 1);
@@ -114,17 +154,6 @@ public class Curling implements ApplicationListener {
 			shapeRenderer.end();
 		}
 		
-		batch.setProjectionMatrix(camera.combined);
-		batch.begin();
-		
-		boolean wantRender = false;
-		for (Stone stone : stones) {
-			stone.draw();
-			if (!wantRender && stone.moving) wantRender = true;
-		}
-		
-		
-		batch.end();
 		debugRenderer.render(world, camera.combined);  
         world.step(BOX_STEP, BOX_VELOCITY_ITERATIONS, BOX_POSITION_ITERATIONS);
 		
@@ -158,6 +187,11 @@ public class Curling implements ApplicationListener {
 			hitBody.setType(BodyType.DynamicBody);
 			Vector2 vel = new Vector2(Gdx.input.getX(), screenH-Gdx.input.getY()).sub(touchPoint);
 			hitBody.setLinearVelocity(vel);
+			if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+				hitBody.setAngularVelocity(1);
+			} else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+				hitBody.setAngularVelocity(-1);
+			}
 		}
 		mouseDown = Gdx.input.isTouched();
 	}
@@ -181,7 +215,7 @@ public class Curling implements ApplicationListener {
 		bodyDef.position.set(x, y);
         Body body = world.createBody(bodyDef);
         CircleShape dynamicCircle = new CircleShape();
-        dynamicCircle.setRadius(BOX_TO_WORLD);
+        dynamicCircle.setRadius(BOX_STONE_RADIUS);
         FixtureDef fixtureDef = new FixtureDef();
         fixtureDef.shape = dynamicCircle;
         fixtureDef.density = 23f;
