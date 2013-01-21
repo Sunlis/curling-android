@@ -60,7 +60,7 @@ public class Stone {
 	
 	public void draw() {
 		this.update();
-//		sprite.draw(Curling.batch);
+		sprite.draw(Curling.batch);
 	}
 	
 }
